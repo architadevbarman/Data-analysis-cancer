@@ -1,0 +1,585 @@
+---
+title: "Archita_functions"
+author: "Olga Sirbu"
+date: "2023-02-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##1. Loading data
+```{r}
+##to load a csv file use 
+df_fpkm <- read.table("C:/Users/archita/Desktop/TCF7L2/GSE151934_SW480_TCF7L2_RSEM_TPM.txt", dec=".")
+colnames(df_fpkm) <- df_fpkm[1,]
+df_fpkm <- df_fpkm[-1,]
+rownames(df_fpkm) <- df_fpkm$GeneName
+
+df_fpkm2 <- df_fpkm
+df_fpkm <- df_fpkm[-1]
+
+
+
+
+df_fpkm2 <- df_fpkm
+df_fpkm <- mutate_all(df_fpkm, function(x) as.numeric(as.character(x)))
+df_fpkm <- df_fpkm[rowSums(df_fpkm[])>0,]
+
+df_fpkm <- as.numeric(df_fpkm)
+
+df_rpm <- df_fpkm[,c(1,2,4,6,8,10,12,14)]
+df_counts <- df_fpkm[,c(1,2,3,5,7,9,11,13,15)]
+colnames(df_fpkm) <-c("GeneName","T0_R1","T0_R2","T24_R1","T24_R2","T28_R1","T28_R2","T72_R1","T72_R2")
+
+df_rpm <- df_rpm[-1,]
+df_counts <- df_counts[-1,]
+```
+
+
+###data2 prep
+```{r}
+write.csv(df_fpkm, "C:/Users/archita/Desktop/TCF7L2/GSE151934_filt1.csv" )
+df <- df_fpkm[,c(1,2,4,6,8,10,12,14)]
+colnames(df_fpkm) <-c("T0_R1","T0_R2","T24_R1","T24_R2","T28_R1","T28_R2","T72_R1","T72_R2")
+
+
+```
+
+##data prep from beginning
+```{r}
+df_fpkm <- df_fpkm[-2]
+
+df_rpm <- df_fpkm[,c(1,3,5,7,9,11,13,15,17)]
+colnames(df_rpm) <- c("ensembl_id","day0_r1","day0_r2","day4_r1","day4_r2","day7_r1","day7_r2","day10_r1","day10_r2")
+df_rpm <- df_rpm[-1,]
+rownames(df_rpm) <- df_rpm$ensembl_id
+
+
+df_counts <- df_fpkm[,c(1,2,4,6,8,10,12,14,16)]
+colnames(df_counts) <- c("ensembl_id","day0_r1","day0_r2","day4_r1","day4_r2","day7_r1","day7_r2","day10_r1","day10_r2")
+df_counts <- df_counts[-1,]
+rownames(df_counts) <- df_counts$ensembl_id
+```
+
+
+
+##2. Scatterplots
+You can choose whatever package you like for scatterplots. You can use base R with functions like plot(x,y), or ggplot. ggplot is the more common package to use. 
+Links: 
+https://www.tutorialspoint.com/r/r_scatterplots.htm
+https://www.statmethods.net/graphs/scatterplot.html
+https://r-graph-gallery.com/272-basic-scatterplot-with-ggplot2.html
+https://www.guru99.com/r-scatter-plot-ggplot2.html
+
+
+```{r}
+log_rpm <- df_rpm
+rownames(log_rpm)<- df_rpm$ensembl_id
+log_rpm <- log_rpm[-1]
+log_rpm <- data.frame(lapply(log_rpm,as.numeric))
+log_rpm <- log10(log_rpm+1)
+plot(log_rpm$day0_r1, log_rpm$day4_r1)
+
+
+rownames(df_rpm) <- rownames(df_rpm$ensembl_id)
+df_rpm <- df_rpm[, c(3:10)]
+df_rpm <- data.frame(lapply(df_rpm, as.numeric))
+rownames(df_rpm) <- rownames(log_rpm)
+
+
+                     
+```
+
+```{r}
+plot(tpm_filtered_log$day4_r1, tpm_filtered_log$day10_r2, xlab = "day4_r1", ylab = "day10_r2", pch=20) 
+tpm_filtered_log <- log10(tpm_filt + 1)
+```
+
+## data2
+```{r}
+`log_fpkm <- df_fpkm
+rownames(log_fpkm)<- df_fpkm$GeneName
+log_fpkm <- log_fpkm[-1]
+log_fpkm <- data.frame(lapply(log_fpkm,as.numeric))
+log_fpkm <- log10(df_fpkm+1)
+plot(log_fpkm$SW480_T0_Rep1_TPM, log_fpkm$SW480_T0_Rep2_TPM)
+
+
+rownames(df_fpkm) <- rownames(df_fpkm$GeneName)
+df_fpkm <- df_fpkm[, c(3:10)]
+df_fpkm <- data.frame(lapply(df_fpkm, as.numeric))
+rownames(df_fpkm) <- rownames(log_fpkm)
+
+
+
+
+log_fpkm <- log10(tpm_filt+1)
+plot(log_tpm$T72_R1, log_tpm$T24_R2, xlab = "T72_R1", ylab = "T24_R2", pch=20)
+
+ggplot(mtcars, aes(x = drat, y = mpg)) +
+    geom_point()
+
+```
+
+
+
+
+
+##3. Distribution Fitting
+```{r}
+#load the necessary packages. If not available, then use install.packages() function
+#install.packages("fitdistrplus")
+library(fitdistrplus)
+
+library(MASS)
+
+#install.packages("actuar")
+library(actuar)
+library(stats)
+
+install.packages("sfsmisc")
+library(sfsmisc)
+
+
+
+##if your dataframe does not have a separate column for genes, make sure you create one.
+colnames(df_rpm)[1] <- "gene_id"
+rownames(df_fpkm) <- df_fpkm$gene_id
+head(df_rpm)
+#range(df_fpkm$patient_A.P_FPKM)
+
+#change this to the sample names of your dataframe
+col_slt <- c("day0_r1","day0_r2","day4_r1","day4_r2","day7_r1","day7_r2","day10_r1","day10_r2")
+
+##if your data is in fpkm, and you need tpm you can use fpkm2tpm function: 
+
+fpkm2tpm <- function(fpkm) {
+  return (1e6*fpkm/sum(fpkm))
+}
+##if your data is in rpkm, and you need tpm you can use rpkm2tpm function: 
+rpkm2tpm <- function(x) {
+  x <- as.matrix(x)
+  return(t(t(x)/colSums(x))*10^6)
+}
+
+##convert to tpm
+df_tpm <- apply(df_fpkm[,col_slt], MARGIN = 2, fpkm2tpm )
+
+#line below is optional, i need to edit the column names from "patient_A.P_FPKM" to "patient_A.P":
+
+#colnames(df_tpm) <- sapply(col_slt, function(x) substr(x, start = 1, stop = nchar(x)-5 ) )
+head(df_tpm)
+
+dim(df_rpm)
+
+# dist fit
+tpm.df <- df_rpm #
+samples <- col_slt 
+
+#use this line if you have replicates: 
+replicates <- rep(LETTERS[1:2], 4)
+#this is for replicates "A" "B" "A" "B". you can modify according to your dataset
+
+#set the distributions you are interested
+dist.names <- c("Lognormal", "Pareto", "Burr", "Loglogistic", "Weibull", "Gamma")
+
+#select colours for each distribution for plotting
+colors <- c(rainbow(5),grey(0.6))
+
+#create an empty list
+sample.list <- list()
+
+rownames(tpm.df) <- tpm.df$gene_id
+tpm.df <- tpm.df[-1]
+tpm.df2 <- data.frame(sapply(tpm.df, function(x) as.numeric(as.character(x))))
+rownames(tpm.df2) <- rownames(tpm.df)
+tpm.df2 <- tpm.df2[rowSums(tpm.df2[])>0,]
+
+tpm.df <- tpm.df2
+
+
+#you loop over the column names of your df. This will fill the sample.list empty list that you had defined previously with the objects necessary to plot your distribution fitting.
+for (i in 1:ncol(tpm.df)) {
+  samplei.i<-tpm.df[,i]
+  samplei.i<-samplei.i[samplei.i>0]
+  #ln<-fitdist(samplei.i,"lnorm")
+  p<-fitdist(samplei.i,"pareto",start = list(shape = 1, scale = 200),lower=c(0,0))
+  b<-fitdist(samplei.i,"burr",start = list(shape1 = 1, shape2 = 1, rate = 1),lower=c(0,0,0))
+  ll<-fitdist(samplei.i,"llogis",lower=c(0,0))
+  wb<-fitdist(samplei.i,"weibull",lower=c(0,0))
+  g<-fitdist(samplei.i,"gamma",lower=c(0, 0),start=list(scale=1,shape=1))
+  
+  samplei.i.list<-list(p,b,ll,wb,g)
+  sample.list[[i]] <- samplei.i.list
+}
+
+
+write.csv(tpm.df,"C:/Users/archita/Desktop/DataKumar/filter.csv")
+# get min from AIC table
+AIC_df <- as.data.frame(matrix(nrow=ncol(tpm.df),ncol=6))
+colnames(AIC_df) <- dist.names
+for(i in 1:ncol(tpm.df)){
+  samplei.i.list <- sample.list[[i]]
+  AIC_df[i,] <- gofstat(samplei.i.list)$aic
+}
+
+for(i in 1:nrow(AIC_df)){
+  AIC_df$min_AIC[i]<-colnames(AIC_df)[which.min(AIC_df[i,1:6])]
+}
+rownames(AIC_df) <- colnames(tpm.df)
+AIC_df$cutoff_value <- cutoff_val
+
+
+#here you are saving the plots. Make sure to run from png to dev.off() in one go
+png(paste0("./data/ovarian_cancer/distfit/FS1a_cdfcomp.png"), unit="cm", height=5, width=6, res=300) #you can modify the unit, height, width and resolution as you see fit
+par(mfrow=c(2,2), mgp=c(5,0.4,0), oma = c (1, 2, 1, 0.5), cex=0.35) # you can modify mfrow to however many plots you need
+# only get the first replicate to plot
+for(i in seq_along(sample.list)){
+  # only get the first replicate to plot
+  samplei.i.list <- sample.list[[i]]
+  if( i %in% c(1) ) {addlegend=T} else{addlegend=F}
+  if(i %in% c(1,2)) {left_mar=2} else {left_mar=0}       # space for y ticks
+  if(i %in% c(2,4)) {bottom_mar=2} else {bottom_mar=0} # space for x ticks
+  
+  par(mar=c(2, 2, 2, 0))
+  cdfcomp(samplei.i.list,xlogscale=TRUE,ylogscale=TRUE,do.points=F,fitcol=colors, #lwd=1,
+          ylim=c(10^-3,1),xlim=c(10^-2,10^5), addlegend = F, # addlegend
+          ann=F) #main=cell_types[j]
+  title(colnames(df_tpm)[i], line = 0.2)
+  abline(v= cutoff_val, lty=2)
+  
+  if(i==1) legend("bottomright",bty="n" ,col=colors,legend=dist.names,lty=seq(length(dist.names)))
+  # legend(x=10^0.2, y = 10^-0.7, bty="n",legend=cell_types[i])
+}
+mtext("Cumulative Distribution Function", side = 2, outer = T, cex=0.5) 
+mtext("TPM", side = 1, outer = T, cex=0.5) 
+dev.off()
+
+png(paste0("./data/ovarian_cancer/distfit/FS1b_qq.png"), unit="cm", height=5, width=6, res=300)
+par(mfrow=c(2,2), mgp=c(5,0.4,0), oma = c (1, 2, 1, 0.5), cex=0.35)  #bottom, left, top, right #location of label, tick mark label, tick mark
+for (i in 1:ncol(tpm.df)) {  
+  samplei.i.list <- sample.list[[i]]
+  if( i %in% c(1) ) {addlegend=T} else{addlegend=F}
+  if(i %in% c(1,2)) {left_mar=2} else {left_mar=0}       # space for y ticks
+  if(i %in% c(2,4)) {bottom_mar=2} else {bottom_mar=0} # space for x ticks
+  
+   par(mar=c(2, 2, 2, 0))
+  qqcomp(samplei.i.list, xlogscale=TRUE, ylogscale=TRUE, xlim=c(10^-1,10^3), ylim=c(10^-1,10^4),
+         fitpch=20, fitcol=colors ,addlegend = F, main=cell_types[j], ann=FALSE) #, fitpch="."
+  title(colnames(df_tpm)[i], line = 0.2)
+  # if(i %% 2 == 1) eaxis(side=2, at = c(10^-2, 1, 10^2, 10^4, 10^6), cex=0.8)
+  # if(i %in% c(3,4)) eaxis(side=1, at = c( 10^-2, 1, 10^2, 10^4, 10^6), cex=0.8)
+  abline(v=3, lty=2)
+  if(i==1) legend("bottomright",bty="n" ,col=colors,legend=dist.names,lty=seq(length(dist.names)))
+  
+  # legend(x=10^-1.5, y=10^4.3,bty="n",legend=paste0("rep. ", replicates[i],"\n",samples[i]))
+}
+mtext("Empirical quantiles", side = 2, outer = T, cex=0.5)
+mtext("Theoretical quantiles", side = 1, outer = T, cex=0.5)
+dev.off()
+
+write.csv(AIC_df, row.names = F, paste0("./data/ovarian_cancer/distfit/TableS1_AIC.csv"))
+
+```
+
+##4.Filter dataframe
+```{r}
+#filter dataframe using df_filt function; change thres according to the threshold from distribution fitting. And change ncols according to filtering condition.
+df_filt <- function(df,thres=5,ncols=2){
+  # at least ncols columns with minimum thres value
+  # eg. at least 2 above 5
+  # df must have rownames
+  df_binary <- df >= thres
+  df_binary_sum <- rowSums(df_binary)
+  above_thres <- df_binary_sum[df_binary_sum >= ncols]
+  return(df[names(above_thres), ] )
+}
+
+tpm_filt <- df_filt(df_fpkm, thres = 3, ncols = 1)
+
+#save the filtered dataframe for future reference: 
+write.csv(tpm_filt, "C:/Users/archita/Desktop/DataKumar/data_filt.csv")
+
+```
+
+##5. PCA
+```{r}
+#you can use pca2gg which is my function to plot log normalized pca quickly. Otherwise you can use prcomp to perform your pca analysis
+
+
+pca2gg <- function(df, paths, cond, name){
+  ##remove the log10 +1 part if you want to not log normalize
+  exp_transpose<-scale(t(log10(df+1)))
+  colnames(exp_transpose)<-rownames(df)
+  pca_f<-prcomp(exp_transpose)
+  pca_df<-data.frame(PC1=pca_f$x[, 1],
+                     PC2=pca_f$x[, 2],
+                     Sample=rownames(pca_f$x),
+                     Condition=cond)
+  ##edit the ggplot however you want. especially the ggsave part is important.
+  p_pca_full <- ggplot(pca_df, aes(x = PC1, y = PC2, label = Sample, col = Condition)) +
+          geom_point(size = 5) +
+          theme_classic() +
+    geom_text_repel() +
+          theme(text = element_text(size=10), 
+                legend.position="top",
+                legend.margin=margin(0,0,0,0),
+                legend.box.margin=margin(-10,-10,-10,-10),
+                panel.border = element_rect(colour = "black", fill=NA, size=1))
+  ggsave(name,plot=p_pca_full, path=paths, height=20, width =20 , units="cm" )
+}
+
+#pca2gg takes in the dataframe, path where you want to save your plot, conditions which is basically the condition type ex: if i have 6 cancer samples
+pca2gg(tpm_filt, 
+       paths="C:/Users/archita/Desktop/TCF7L2", 
+       cond= c("Time0", "Time24", "Time28", "Time72", "Time0", "Time24", "Time28", "Time72"), 
+       name="main_pca.png")
+
+
+df <- tpm_filt[1:4]
+pca_res <- prcomp(df, scale. = TRUE)
+
+autoplot(pca_res)
+
+autoplot(pca_res, data = tpm_filt, colour = 'Species')
+
+exp_transpose<-scale(t(log10(tpm_filt+1)))
+exp_transpose2 <- exp_transpose[ , colSums(is.na(exp_transpose))==0]
+
+genes <- colnames(exp_transpose2)
+
+which_are_constant(exp_transpose)
+pca_f<-prcomp(exp_transpose)
+tpm_filt <- tpm_filt[genes,]
+write.csv(tpm_filt, "C:/Users/archita/Desktop/TCF7L2/tpm_filt.csv")
+
+
+
+
+##for time series PCA
+
+pcaCompare <- function(df_allgenes, gene_list, color, plotting=T,text,legend=T,...){
+  if(missing(color)) color <- rainbow(length(gene_list))
+  df_scaled <- t(scale(t(df_allgenes)))
+  pca_list <- list()
+  var_prop <- list()
+  for(i in 1:length(gene_list)){
+    gg <- gene_list[[i]]
+    # pca <- FactoMineR::PCA(t(df_allgenes[gg,]), scale.unit = T, ncp=2,graph = F)
+    # pca_dim <- pca$ind$coord
+    pca <- prcomp(t(df_allgenes[gg,]), center = TRUE, scale. = F)
+    pca_dim <- pca$x[,1:2]
+    pca_list[[i]] <- pca$x; names(pca_list)[i] <- names(gene_list)[i]
+    var_prop[[i]] <- summary(pca)$importance[2,]; names(var_prop)[i] <- names(gene_list)[i] 
+    if(plotting){
+      if(i==1){ plot(x=pca_dim[,1],y=pca_dim[,2],pch=c(rep(20,5),17),type="o",col=color[i], xlab="PC1", ylab="PC2",...)}
+      else { lines(x=pca_dim[,1],y=pca_dim[,2],pch=c(rep(20,5),17),type="o",col=color[i],lty=i,...) }
+    }
+  }
+  if(plotting & legend){
+    legend_text = sapply(1:length(gene_list), function(i) 
+      paste0(names(gene_list)[i]," (",length(gene_list[[i]]),")") )
+    legend("top",bty="n",col=color,legend=legend_text, ncol=1,lty=1:length(gene_list), 
+           cex=0.7, x.intersp=0.8, y.intersp=0.9)
+    if(!missing(text)) legend("topleft",bty="n",legend=text)
+  }
+  return(list(pca_list, var_prop))
+}
+
+png(paste0("./pca_traj_rep2",".png"),unit="cm", height=4, width=4.5, res=300)
+par(mar=c(2,2.5,1,0.5),mgp=c(1.2,0.35,0), cex=0.55)
+pca_avg = pcaCompare(log10(tpm_filt[,c(5,6,7,8)]+1), text="", legend=T,
+           gene_list= list("Whole transcriptome"=rownames(tpm_filt)),
+                           color=c("black") )
+dev.off()
+
+
+```
+
+##6. Noise
+```{r}
+#function for calculating noise
+SQCO <- function(MT){
+  #### INPUT: matrix of gene expression, rows = genes, column = repeats of 1 genotype
+  n_genes <- dim(MT)[1]
+  n_samples <- dim(MT)[2]
+  SQCO1 <- matrix(nrow = nrow(MT), ncol = (n_samples*(n_samples-1)/2)) # to store variance values
+  rownames(SQCO1) <- rownames(MT)
+  cc <- combn(x=1:n_samples,m=2)  # every possible pairs of samples
+  
+  # create a table of variance across difference repeats for each genes
+  for (i in 1:nrow(MT)){
+    for (j in 1:ncol(cc) ) {
+      cc_j <- cc[,j]
+      # cat(cc_j,"\n")
+      SQCO1[i,j] <- 2*((MT[i,cc_j[1]] - MT[i,cc_j[2]])^2)/((MT[i,cc_j[1]] + MT[i,cc_j[2]])^2)  
+      ## expression noise of ith gene in each pair of cell
+    }
+  }
+  
+  # SQCO1[is.nan(SQCO1)] <- 0
+  SQCO1 <- SQCO1[complete.cases(SQCO1), ]
+  if(!is.matrix(SQCO1)){
+    SQCO1 <- as.matrix(SQCO1, ncol=1)
+  }
+  
+  # noise across difference repeats of each gene
+  SQCO1.1 <- matrix(nrow = nrow(SQCO1), ncol = 1)
+  for (i in 1:nrow(SQCO1)) {
+    SQCO1.1[i,1] <- 2*sum(SQCO1[i,])/(ncol(MT)*(ncol(MT)-1))
+    ## pairwise noise of ith gene
+  }
+  
+  #noise of the data set: across all repeats, across all genes
+  SQCO1.2 <- matrix(sum(SQCO1.1)/nrow(SQCO1.1))
+  return(SQCO1.2)
+}
+
+
+
+
+```
+
+##7. Entropy
+```{r}
+computeBin <- function(arr) { # Doane's rule
+  n <- length(arr)
+  gx <- moments::skewness(arr)
+  sigmag <- sqrt(6 * (n - 2) / ((n + 1) * n + 3))
+  bin <- 1 + log2(n) + log2(1 + abs(gx) / sigmag)
+  return(bin)
+}
+
+getBinCounts <- function(arr) {
+  bins <-computeBin(arr)
+  vec <- entropy::discretize(arr, computeBin(arr), r = range(arr))
+  return(vec)
+  }
+
+entropyAvg <- function(mt){
+  # mt has to be numeric vector
+  entropy.vector <- NULL
+  for(i in 1:ncol(mt)){
+    binCount <- getBinCounts(mt[, i])
+    entropy <- entropy::entropy.empirical(binCount, unit = "log2")
+    entropy.vector <- c(entropy.vector, entropy)
+  }
+  return(mean(entropy.vector))
+}
+#Entropy Avg is the function you use. getbincounts and compute bin are helping functions
+```
+
+
+##8. Auto-correlation
+```{r}
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("impute")
+#change time points to yours
+timepoints <- c(0,4,7,10)
+##works for pearson, bicor,spearman and MI correlation
+auto.cor <- function(avg.filt,method="pearson"){
+  # avg.filt: rows to be expression of genes, colnames to be sample names, rownames to be gene names
+  # if(method == "MI"|| method == "mi"){avg.filt <- apply(avg.filt, MARGIN = 2,FUN = rank)}  # rank transformation for MI
+  a1 <- avg.filt[,1]
+  auto.vec <- NULL
+  for(i in 1:ncol(avg.filt)){
+    ai <- avg.filt[,i]
+    if (method == "bicor"){  #midweight bicorrelation 
+      auto.vec <- c(auto.vec, WGCNA::bicor(ai,a1))    } 
+    else if (method == "MI") {  # MI-based correlation
+      mt.disc <- infotheo::discretize(cbind(ai,a1),nbins=10, disc="equalfreq") 
+      mi <- infotheo::mutinformation(mt.disc)[1,2]
+      # auto.vec <- c(auto.vec, mi.apply(cbind(ai,a1))[1,2])
+    } else{
+      auto.vec <- c(auto.vec, cor(avg.filt[,1],avg.filt[,i],method=method))
+    }
+  }
+  return(auto.vec)
+}
+
+autocorPlot <- function(df_allgenes,gene_list,method="pearson",repeats=1,size=200, ylim,color,pch, add.legend=T,text="",inset=c(0,0),...){
+  # gene_list: list of genes, with name
+  if(missing (color)) color <- rainbow(length(gene_list))
+  if(missing (pch)) pch <-rep(20,length(gene_list))
+  mt_cor_list <- list()
+  for(i in 1:length(gene_list)){
+    genes <- gene_list[[i]]
+    if(repeats == 1) mt_cor <- auto.cor(df_allgenes[genes,], method=method)
+    else mt_cor <- auto.corRep(df_allgenes[genes,], method=method, repeats, size)
+    mt_cor_list[[i]] <- mt_cor
+  }
+  
+  if(missing(ylim)){
+    ymin <- 0.95*min(unlist(mt_cor_list))
+    if(is.infinite(ymin) ) ymin=0.5
+    ylim <- c(ymin,1)
+  }
+  
+  for(i in 1:length(gene_list)){
+    genes <- gene_list[[i]]
+    mt_cor <- mt_cor_list[[i]]
+    if(i == 1) {plot(x=timepoints, y=mt_cor, ylim=ylim, col=color[i], pch=pch[i] ,type="o", xlab="Time", ylab=paste(method,"auto-correlation" ), ...)}
+    else {lines(x=timepoints, y=mt_cor, col=color[i], pch=pch[i], lty=i, type="o")}
+  }
+  # title(main=paste(method, "correlation"), line=0.3)
+  if(!missing(text)) legend("bottomright",bty="n",legend=text)
+  if(add.legend){
+    legend_text = sapply(1:length(gene_list), function(i) 
+      paste0(names(gene_list)[i]," (",length(gene_list[[i]]),")") )
+    legend("bottomleft",bty="n",inset=inset,lty=1:length(gene_list),col=color,pch=pch,legend=legend_text, y.intersp = 0.8, x.intersp = 0.8,cex=0.7)
+  }
+}
+
+
+
+
+methods = c("pearson")
+png(paste0("C:/Users/archita/Desktop/TCF7L2/corr_R2_v2.png"),unit="cm", height=9, width=12, res=300)
+par(mfrow=c(1,1), mar=c(2,2,1,1.1),mgp=c(1,0.2,0))
+for(method in methods){
+  autocorPlot(tpm_filt[,c(5,6,7,8)], repeats = 1, pch=c(20,20,20), method=method, text="", 
+              cex=0.7, cex.lab=0.7, cex.axis=0.7,
+              color=c("black"),
+              gene_list= list("Whole transcriptome"=rownames(tpm_filt)) )
+}
+dev.off()
+
+
+
+
+tpm_filt <- tpm_filt[,c(1,3,5,7,2,4,6,8)]
+
+
+res <- cor(tpm_filt)
+round(res, 2)
+
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+
+ggcorrplot(res, 
+   lab = TRUE)+
+  scale_fill_gradient2(limit=c(0.97,1),
+                       low="blue",high="red",mid="white",midpoint=0.98)
+corrplot(cor(tpm_filt), method = "shade", number.digits = 4, 
+         col.lim = c(0.96,1), is.corr = FALSE)
+```
+

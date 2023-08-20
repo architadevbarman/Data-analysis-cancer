@@ -1,0 +1,52 @@
+---
+title: "Archita_feb_functions"
+author: "Olga Sirbu"
+date: "2023-02-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##1. Importing file
+```{r}
+## importing a csv file into your R environment
+data_tpm <- read.csv("/Users/thuytienbui/Desktop/patient_tpm.csv")
+## edit the directory according to where you want your file to be
+```
+
+##2. Filter function
+```{r}
+##function you can use for your filtering 
+
+df_filt <- function(df,thres=5,ncols=2){
+  # at least ncols columns with minimum thres value
+  # eg. at least 2 above 5
+  # df must have rownames
+  df_binary <- df >= thres
+  df_binary_sum <- rowSums(df_binary)
+  above_thres <- df_binary_sum[df_binary_sum >= ncols]
+  return(df[names(above_thres), ] )
+}
+```
+
+
+##2. Filtering the dataset
+```{r}
+ 
+#in the environment you can check how your dataframe looks
+
+##my gene names were saved as a separate column, so I will make sure they are saved as rownames instead
+rownames(data_tpm) <- data_tpm$X
+
+#remove the unnecessary column
+data_tpm <- data_tpm[-1]
+```
+
+##3. Saving the dataframe
+```{r}
+write.csv(data_tpm, "/Users/thuytienbui/Desktop/patient_tpm_filt.csv")
+#change path to where you want to save it
+```
+
